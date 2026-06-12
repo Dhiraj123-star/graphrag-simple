@@ -1,12 +1,48 @@
 import networkx as nx
+import numpy as np
+from llm import get_embedding
 
-def find_relevant_nodes(G: nx.DiGraph, query: str) -> list[str]:
-    """Simple keyword match: find nodes mentioned in the query."""
-    query_lower = query.lower()
-    matched = [
-        node for node in G.nodes
-        if node.lower() in query_lower
-    ]
+
+def cosine_similarity(a:list[float],b:list[float]) -> float:
+    a,b = np.array(a),np.array(b)
+    return float(np.dot(a,b)/ (np.linalg.norm(a)*np.linalg.norm(b)))
+
+
+def build_node_embeddings(G: nx.DiGraph) -> dict[str,list[float]]:
+    """Pre-compute and return embeddings for every node in the graph."""
+
+    print("\nComputing node embeddings....")
+    embeddings={}
+    for node in G.nodes:
+        embeddings[node]= get_embedding(node)
+        print(f" embedded: {node}")
+    
+    return embeddings
+
+def find_relevant_nodes(
+    query:str,
+    node_embeddings : dict[str,list[float]],
+    top_k: int=3,
+    threshold: float = 0.4,
+
+)-> list[str]:
+    """
+    Embed the query and find the top-k most similar nodes
+    by cosine similarity. Skip nodes below threshold.
+    """
+    query_embedding = get_embedding(query)
+    scores=[]
+
+    for node, node_emb in node_embeddings.items():
+        score = cosine_similarity(query_embedding,node_emb)
+        if score >=threshold:
+            scores.append((node,score))
+    
+    scores.sort(key=lambda x: x[1],reverse=True)
+
+    matched = [node for node, _ in scores[:top_k]]
+    print(f"\nMatched nodes for query: {matched}")
+
     return matched
 
 
