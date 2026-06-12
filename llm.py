@@ -53,3 +53,11 @@ Answer:"""
         temperature=0.2,
     )
     return response.choices[0].message.content.strip()
+
+def get_embedding(text:str) ->list[float] :
+    """Get vector embeddings for a given text using OpenAI"""
+    response = client.embeddings.create(
+        model= "text-embedding-3-small",
+        input=text.strip(),
+    )
+    return response.data[0].embedding
