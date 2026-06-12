@@ -12,7 +12,7 @@ A lightweight GraphRAG implementation that extracts a knowledge graph from raw t
 - Builds a directed graph using NetworkX with typed, labeled edges
 
 ### 🕸️ Graph-Aware Retrieval
-- Matches entities in a user query directly to graph nodes
+- Matches entities in a user query directly to graph nodes using semantic similarity
 - Walks the graph up to N hops in both directions from matched nodes
 - Collects relational context (not just raw chunks) before passing to the LLM
 
@@ -24,9 +24,15 @@ A lightweight GraphRAG implementation that extracts a knowledge graph from raw t
 - Answers are generated only from graph-retrieved context, not raw documents
 - Reduces hallucination by feeding structured facts instead of fuzzy vector chunks
 
+### 🧠 Semantic Node Matching
+- Query is embedded using OpenAI `text-embedding-3-small`
+- All graph nodes are pre-embedded once after graph build
+- Matched by cosine similarity — handles partial names, synonyms, and paraphrases
+- Tunable via `top_k` (how many nodes to retrieve) and `threshold` (minimum similarity score)
+
 ### ⚡ Minimal Setup
-- Single dependency stack: `openai`, `networkx`, `python-dotenv`
-- No vector database, no embeddings, no infrastructure — runs from one terminal command
+- Dependency stack: `openai`, `networkx`, `python-dotenv`, `numpy`
+- No vector database, no infrastructure — runs from one terminal command
 
 ---
 
@@ -34,7 +40,7 @@ A lightweight GraphRAG implementation that extracts a knowledge graph from raw t
 
 ```bash
 # Install dependencies
-pip install openai networkx python-dotenv
+pip install openai networkx python-dotenv numpy
 
 # Add your OpenAI key
 echo "OPENAI_API_KEY=sk-..." > .env
@@ -51,8 +57,8 @@ python main.py
 graphrag-simple/
 ├── main.py           # Entry point — loads data, runs queries
 ├── graph_builder.py  # Extracts triples and builds the graph
-├── retriever.py      # Node matching and subgraph context collection
-├── llm.py            # OpenAI calls (extraction + answering)
+├── retriever.py      # Semantic node matching and subgraph context collection
+├── llm.py            # OpenAI calls (extraction, answering, embeddings)
 ├── data.py           # Sample text corpus
 └── requirements.txt
 ```
@@ -64,15 +70,20 @@ graphrag-simple/
 ```
 Building knowledge graph...
   + (Elon Musk) --[founded]--> (SpaceX)
-  + (SpaceX) --[developed]--> (Falcon 9)
+  + (SpaceX) --[developed]--> (Falcon 9 rocket)
   + (NASA) --[partnered with]--> (SpaceX)
   ...
 
-Graph built: 12 nodes, 14 edges
+Graph built: 24 nodes, 25 edges
+
+Computing node embeddings...
+  embedded: Elon Musk
+  embedded: SpaceX
+  ...
 
 Q: What did NASA do with SpaceX?
-A: NASA partnered with SpaceX for the Crew Dragon mission, which
-   successfully transported astronauts to the ISS.
+Matched nodes: ['SpaceX', 'Falcon 9 rocket']
+A: NASA partnered with SpaceX and was involved in the Crew Dragon mission.
 ```
 
 ---
@@ -82,17 +93,20 @@ A: NASA partnered with SpaceX for the Crew Dragon mission, which
 | | Plain RAG | GraphRAG (this project) |
 |---|---|---|
 | **Retrieval unit** | Text chunk | Graph subgraph |
-| **Matching** | Vector similarity | Entity keyword → node |
+| **Matching** | Vector similarity | Cosine similarity on graph nodes |
+| **Handles partial names** | ❌ | ✅ via embeddings |
 | **Relation awareness** | ❌ | ✅ Typed edges |
 | **Multi-hop reasoning** | ❌ | ✅ Configurable depth |
-| **Setup complexity** | Vector DB required | NetworkX only |
+| **Setup complexity** | Vector DB required | NetworkX + numpy only |
 
 ---
 
 ## Roadmap
 
+- [x] Semantic node matching via OpenAI embeddings and cosine similarity
+- [ ] Entity deduplication — merge nodes like "Musk" and "Elon Musk"
+- [ ] Relation normalization — unify "founded", "co-founded", "was founder of"
 - [ ] Replace NetworkX with Neo4j for persistent, queryable graph storage
-- [ ] Add vector embeddings on nodes for semantic (not just keyword) node matching
 - [ ] Community detection for cluster-level summarisation before answering
 - [ ] Graph visualisation export (GraphML / interactive HTML)
 - [ ] REST API layer (FastAPI) to expose query endpoint
@@ -103,4 +117,23 @@ A: NASA partnered with SpaceX for the Crew Dragon mission, which
 ## Requirements
 
 - Python 3.10+
-- OpenAI API key (`gpt-4o-mini` used by default)
+- OpenAI API key (`gpt-4o-mini` and `text-embedding-3-small` used by default)
+```
+
+---
+
+## What Changed
+
+| Section | Change |
+|---|---|
+| **Graph-Aware Retrieval** | Updated bullet to mention semantic similarity |
+| **Semantic Node Matching** | New feature section added |
+| **Minimal Setup** | Added `numpy` to dependency list |
+| **Quickstart** | Added `numpy` to install command |
+| **Project Structure** | Updated comments for `retriever.py` and `llm.py` |
+| **Example Output** | Updated to reflect actual output (24 nodes, embeddings log) |
+| **Comparison table** | Updated matching row + added partial names row |
+| **Roadmap** | Checked off semantic matching, added entity dedup and relation normalization as next items |
+
+---
+
