@@ -30,6 +30,12 @@ A lightweight GraphRAG implementation that extracts a knowledge graph from raw t
 - Matched by cosine similarity — handles partial names, synonyms, and paraphrases
 - Tunable via `top_k` (how many nodes to retrieve) and `threshold` (minimum similarity score)
 
+### 🔁 Entity Deduplication
+- All entity names are normalized (lowercase + strip) before being added to the graph
+- An alias map resolves known variants to canonical names (e.g. `"Musk"` → `"Elon Musk"`)
+- Prevents duplicate nodes for the same real-world entity
+- Fully contained in `graph_builder.py` — no changes required in retrieval or LLM layers
+
 ### ⚡ Minimal Setup
 - Dependency stack: `openai`, `networkx`, `python-dotenv`, `numpy`
 - No vector database, no infrastructure — runs from one terminal command
@@ -56,7 +62,7 @@ python main.py
 ```
 graphrag-simple/
 ├── main.py           # Entry point — loads data, runs queries
-├── graph_builder.py  # Extracts triples and builds the graph
+├── graph_builder.py  # Extracts triples, deduplicates entities, builds the graph
 ├── retriever.py      # Semantic node matching and subgraph context collection
 ├── llm.py            # OpenAI calls (extraction, answering, embeddings)
 ├── data.py           # Sample text corpus
@@ -97,6 +103,7 @@ A: NASA partnered with SpaceX and was involved in the Crew Dragon mission.
 | **Handles partial names** | ❌ | ✅ via embeddings |
 | **Relation awareness** | ❌ | ✅ Typed edges |
 | **Multi-hop reasoning** | ❌ | ✅ Configurable depth |
+| **Entity deduplication** | ❌ | ✅ Alias map + normalization |
 | **Setup complexity** | Vector DB required | NetworkX + numpy only |
 
 ---
@@ -104,7 +111,7 @@ A: NASA partnered with SpaceX and was involved in the Crew Dragon mission.
 ## Roadmap
 
 - [x] Semantic node matching via OpenAI embeddings and cosine similarity
-- [ ] Entity deduplication — merge nodes like "Musk" and "Elon Musk"
+- [x] Entity deduplication — normalize and alias-map variants to canonical names
 - [ ] Relation normalization — unify "founded", "co-founded", "was founder of"
 - [ ] Replace NetworkX with Neo4j for persistent, queryable graph storage
 - [ ] Community detection for cluster-level summarisation before answering
