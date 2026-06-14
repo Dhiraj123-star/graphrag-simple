@@ -1,3 +1,5 @@
+import os
+import json
 import networkx as nx
 from llm import extract_entities_and_relations
 
@@ -76,11 +78,44 @@ RELATION_MAP: dict[str, str] = {
     "makes"                     : "produces",
 }
 
+GRAPH_PATH = "graph.json"
+# ---------------------------------------------
+# Persistence -- save and load graph from disk
+# ----------------------------------------------
+
+def save_graph(G: nx.DiGraph) -> None:
+    """ Serialize graph to JSON and save to disk. """
+    data = nx.node_link_data(G)
+    with open(GRAPH_PATH,"w") as f:
+        json.dump(data,f,indent=2)
+    
+    print(f"\nGraph saved to {GRAPH_PATH}")
+
+def load_graph() -> nx.DiGraph | None:
+    """Load graph from disk if it exists, else return None"""
+    if os.path.exists(GRAPH_PATH):
+        with open(GRAPH_PATH,"r") as f:
+            data = json.load(f)
+        G = nx.node_link_graph(data,directed=True)
+
+        print(f"Graph loaded from {GRAPH_PATH}- skipping rebuild.")
+        return G
+    
+    return None
+
+
 # -----------------------
 # Graph builder 
 # -----------------------
 
 def build_graph(documents: list[str]) -> nx.DiGraph:
+
+    # Try loading from disk first
+    G  = load_graph()
+    if G is not None:
+        return G
+    print("No saved graph found - building from scratch ......")
+
     G = nx.DiGraph()
 
     for doc in documents:
@@ -107,5 +142,7 @@ def build_graph(documents: list[str]) -> nx.DiGraph:
                 # Add edge with relation as attribute
                 G.add_edge(head, tail, relation=relation)
                 print(f"  + ({head}) --[{relation}]--> ({tail})")
-
+                
+    # Save to disk for next run
+    save_graph(G)
     return G
