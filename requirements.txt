@@ -2,3 +2,5 @@ openai
 networkx
 python-dotenv
 numpy
+fastapi
+uvicorn
