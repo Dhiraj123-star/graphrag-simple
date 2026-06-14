@@ -36,6 +36,13 @@ A lightweight GraphRAG implementation that extracts a knowledge graph from raw t
 - Prevents duplicate nodes for the same real-world entity
 - Fully contained in `graph_builder.py` — no changes required in retrieval or LLM layers
 
+### 🔀 Relation Normalization
+- Raw relation variants are mapped to a fixed canonical vocabulary via `RELATION_MAP`
+- e.g. `"co-founded"`, `"was founder of"`, `"is founder of"` all resolve to `"founded"`
+- e.g. `"became CEO of"`, `"has CEO"` resolve to `"is CEO of"`
+- e.g. `"developed"`, `"built"`, `"launched"` resolve to `"created"`
+- Cleaner edges improve graph traversal and reduce noisy LLM context
+
 ### ⚡ Minimal Setup
 - Dependency stack: `openai`, `networkx`, `python-dotenv`, `numpy`
 - No vector database, no infrastructure — runs from one terminal command
@@ -62,7 +69,7 @@ python main.py
 ```
 graphrag-simple/
 ├── main.py           # Entry point — loads data, runs queries
-├── graph_builder.py  # Extracts triples, deduplicates entities, builds the graph
+├── graph_builder.py  # Extracts triples, deduplicates entities, normalizes relations
 ├── retriever.py      # Semantic node matching and subgraph context collection
 ├── llm.py            # OpenAI calls (extraction, answering, embeddings)
 ├── data.py           # Sample text corpus
@@ -76,8 +83,8 @@ graphrag-simple/
 ```
 Building knowledge graph...
   + (Elon Musk) --[founded]--> (SpaceX)
-  + (SpaceX) --[developed]--> (Falcon 9 rocket)
-  + (NASA) --[partnered with]--> (SpaceX)
+  + (SpaceX) --[created]--> (Falcon 9 rocket)
+  + (NASA) --[partners with]--> (SpaceX)
   ...
 
 Graph built: 24 nodes, 25 edges
@@ -102,6 +109,7 @@ A: NASA partnered with SpaceX and was involved in the Crew Dragon mission.
 | **Matching** | Vector similarity | Cosine similarity on graph nodes |
 | **Handles partial names** | ❌ | ✅ via embeddings |
 | **Relation awareness** | ❌ | ✅ Typed edges |
+| **Relation consistency** | ❌ | ✅ Canonical relation map |
 | **Multi-hop reasoning** | ❌ | ✅ Configurable depth |
 | **Entity deduplication** | ❌ | ✅ Alias map + normalization |
 | **Setup complexity** | Vector DB required | NetworkX + numpy only |
@@ -112,7 +120,7 @@ A: NASA partnered with SpaceX and was involved in the Crew Dragon mission.
 
 - [x] Semantic node matching via OpenAI embeddings and cosine similarity
 - [x] Entity deduplication — normalize and alias-map variants to canonical names
-- [ ] Relation normalization — unify "founded", "co-founded", "was founder of"
+- [x] Relation normalization — unify relation variants to a fixed canonical vocabulary
 - [ ] Replace NetworkX with Neo4j for persistent, queryable graph storage
 - [ ] Community detection for cluster-level summarisation before answering
 - [ ] Graph visualisation export (GraphML / interactive HTML)
