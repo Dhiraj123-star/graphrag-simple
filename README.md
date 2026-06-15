@@ -49,17 +49,26 @@ A lightweight GraphRAG implementation that extracts a knowledge graph from raw t
 - `load_graph()` returns `None` if no cache exists, triggering a fresh build automatically
 - `graph.json` is gitignored — cache stays local only
 
+### 🚀 REST API (FastAPI)
+- Graph and node embeddings are loaded once on server startup via FastAPI lifespan
+- `POST /query` — accepts a question, returns matched nodes, context, and answer
+- `GET /graph/stats` — returns node count, edge count, and full node list
+- `GET /health` — lightweight health check endpoint
+- Interactive Swagger UI available at `http://localhost:8000/docs`
+
 ### ⚡ Minimal Setup
-- Dependency stack: `openai`, `networkx`, `python-dotenv`, `numpy`
+- Dependency stack: `openai`, `networkx`, `python-dotenv`, `numpy`, `fastapi`, `uvicorn`
 - No vector database, no infrastructure — runs from one terminal command
 
 ---
 
 ## Quickstart
 
+### Run as a script
+
 ```bash
 # Install dependencies
-pip install openai networkx python-dotenv numpy
+pip install openai networkx python-dotenv numpy fastapi uvicorn
 
 # Add your OpenAI key
 echo "OPENAI_API_KEY=sk-..." > .env
@@ -68,13 +77,22 @@ echo "OPENAI_API_KEY=sk-..." > .env
 python main.py
 ```
 
+### Run as an API
+
+```bash
+uvicorn api:app --reload
+```
+
+Then open `http://localhost:8000/docs` for the interactive Swagger UI.
+
 ---
 
 ## Project Structure
 
 ```
 graphrag-simple/
-├── main.py           # Entry point — loads data, runs queries
+├── main.py           # Entry point — loads data, runs queries as a script
+├── api.py            # FastAPI app — exposes /health, /graph/stats, /query
 ├── graph_builder.py  # Extracts triples, deduplicates, normalizes, persists graph
 ├── retriever.py      # Semantic node matching and subgraph context collection
 ├── llm.py            # OpenAI calls (extraction, answering, embeddings)
@@ -85,7 +103,46 @@ graphrag-simple/
 
 ---
 
-## Example Output
+## API Endpoints
+
+### `GET /health`
+```json
+{"status": "ok"}
+```
+
+### `GET /graph/stats`
+```json
+{
+  "nodes": 24,
+  "edges": 25,
+  "node_list": ["Elon Musk", "SpaceX", "Tesla", "..."]
+}
+```
+
+### `POST /query`
+
+Request:
+```json
+{
+  "question": "Who founded SpaceX?",
+  "top_k": 3,
+  "depth": 2
+}
+```
+
+Response:
+```json
+{
+  "question": "Who founded SpaceX?",
+  "matched_nodes": ["SpaceX", "Elon Musk", "Falcon 9 rocket"],
+  "context": "Elon Musk founded SpaceX...",
+  "answer": "Elon Musk founded SpaceX in 2002."
+}
+```
+
+---
+
+## Example Script Output
 
 **First run** — builds and saves the graph:
 ```
@@ -110,13 +167,6 @@ A: NASA partnered with SpaceX and was involved in the Crew Dragon mission.
 **Second run** — loads instantly, zero API extraction calls:
 ```
 Graph loaded from graph.json — skipping rebuild.
-
-Computing node embeddings...
-  ...
-
-Q: What did NASA do with SpaceX?
-Matched nodes: ['SpaceX', 'Falcon 9 rocket']
-A: NASA partnered with SpaceX and was involved in the Crew Dragon mission.
 ```
 
 ---
@@ -133,6 +183,7 @@ A: NASA partnered with SpaceX and was involved in the Crew Dragon mission.
 | **Multi-hop reasoning** | ❌ | ✅ Configurable depth |
 | **Entity deduplication** | ❌ | ✅ Alias map + normalization |
 | **Persistent storage** | ❌ | ✅ JSON cache, skips rebuild |
+| **API access** | ❌ | ✅ FastAPI REST endpoints |
 | **Setup complexity** | Vector DB required | NetworkX + numpy only |
 
 ---
@@ -143,9 +194,9 @@ A: NASA partnered with SpaceX and was involved in the Crew Dragon mission.
 - [x] Entity deduplication — normalize and alias-map variants to canonical names
 - [x] Relation normalization — unify relation variants to a fixed canonical vocabulary
 - [x] Persistent graph storage — save/load graph via JSON, skip rebuild on rerun
+- [x] REST API layer — FastAPI with /health, /graph/stats, /query endpoints
 - [ ] Community detection for cluster-level summarisation before answering
 - [ ] Graph visualisation export (GraphML / interactive HTML)
-- [ ] REST API layer (FastAPI) to expose query endpoint
 - [ ] Support ingesting PDFs and URLs as document sources
 
 ---
