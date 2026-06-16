@@ -78,3 +78,8 @@ htmlcov/
 
 # Graph Cache
 graph.json
+
+# Visualisation output
+graph.html 
+# lib 
+lib/
