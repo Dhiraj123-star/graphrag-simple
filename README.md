@@ -56,8 +56,16 @@ A lightweight GraphRAG implementation that extracts a knowledge graph from raw t
 - `GET /health` — lightweight health check endpoint
 - Interactive Swagger UI available at `http://localhost:8000/docs`
 
+### 🎨 Interactive Graph Visualisation
+- Generates a standalone `graph.html` from the NetworkX graph using `pyvis`
+- Nodes are draggable and zoomable with hover tooltips showing entity names
+- Edges display canonical relation labels inline and on hover
+- Dark themed UI with physics simulation for a natural graph layout
+- Reuses persistent graph cache — no extra API calls on rerun
+- Run with `python visualise.py` — open the output in any browser
+
 ### ⚡ Minimal Setup
-- Dependency stack: `openai`, `networkx`, `python-dotenv`, `numpy`, `fastapi`, `uvicorn`
+- Dependency stack: `openai`, `networkx`, `python-dotenv`, `numpy`, `fastapi`, `uvicorn`, `pyvis`
 - No vector database, no infrastructure — runs from one terminal command
 
 ---
@@ -68,7 +76,7 @@ A lightweight GraphRAG implementation that extracts a knowledge graph from raw t
 
 ```bash
 # Install dependencies
-pip install openai networkx python-dotenv numpy fastapi uvicorn
+pip install openai networkx python-dotenv numpy fastapi uvicorn pyvis
 
 # Add your OpenAI key
 echo "OPENAI_API_KEY=sk-..." > .env
@@ -85,6 +93,14 @@ uvicorn api:app --reload
 
 Then open `http://localhost:8000/docs` for the interactive Swagger UI.
 
+### Generate graph visualisation
+
+```bash
+python visualise.py
+```
+
+Then open the printed `file://` path in your browser.
+
 ---
 
 ## Project Structure
@@ -93,11 +109,13 @@ Then open `http://localhost:8000/docs` for the interactive Swagger UI.
 graphrag-simple/
 ├── main.py           # Entry point — loads data, runs queries as a script
 ├── api.py            # FastAPI app — exposes /health, /graph/stats, /query
+├── visualise.py      # Generates interactive graph.html via pyvis
 ├── graph_builder.py  # Extracts triples, deduplicates, normalizes, persists graph
 ├── retriever.py      # Semantic node matching and subgraph context collection
 ├── llm.py            # OpenAI calls (extraction, answering, embeddings)
 ├── data.py           # Sample text corpus
 ├── graph.json        # Auto-generated graph cache (gitignored)
+├── graph.html        # Auto-generated visualisation output (gitignored)
 └── requirements.txt
 ```
 
@@ -184,6 +202,7 @@ Graph loaded from graph.json — skipping rebuild.
 | **Entity deduplication** | ❌ | ✅ Alias map + normalization |
 | **Persistent storage** | ❌ | ✅ JSON cache, skips rebuild |
 | **API access** | ❌ | ✅ FastAPI REST endpoints |
+| **Graph visualisation** | ❌ | ✅ Interactive HTML via pyvis |
 | **Setup complexity** | Vector DB required | NetworkX + numpy only |
 
 ---
@@ -195,8 +214,8 @@ Graph loaded from graph.json — skipping rebuild.
 - [x] Relation normalization — unify relation variants to a fixed canonical vocabulary
 - [x] Persistent graph storage — save/load graph via JSON, skip rebuild on rerun
 - [x] REST API layer — FastAPI with /health, /graph/stats, /query endpoints
+- [x] Interactive graph visualisation — draggable, zoomable HTML export via pyvis
 - [ ] Community detection for cluster-level summarisation before answering
-- [ ] Graph visualisation export (GraphML / interactive HTML)
 - [ ] Support ingesting PDFs and URLs as document sources
 
 ---
