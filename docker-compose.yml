@@ -1,0 +1,15 @@
+services:
+  graphrag-api:
+    build: .
+    container_name: graphrag-api
+
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    
+    volumes:
+      - ./graph.json:/app/graph.json
+      - ./graph.html:/app/graph.html
+    
+    restart: unless-stopped
