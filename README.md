@@ -64,9 +64,16 @@ A lightweight GraphRAG implementation that extracts a knowledge graph from raw t
 - Reuses persistent graph cache — no extra API calls on rerun
 - Run with `python visualise.py` — open the output in any browser
 
+### 🐳 Dockerized Deployment
+- `Dockerfile` builds a lean `python:3.11-slim` image running the FastAPI app via `uvicorn`
+- `docker-compose.yml` runs the API on port `8000` with one command
+- `graph.json` and `graph.html` are mounted as volumes — graph cache persists across container rebuilds
+- `.env` is passed via `env_file`, keeping API keys out of the image
+- `.dockerignore` keeps the image lean by excluding venvs, caches, and git files
+
 ### ⚡ Minimal Setup
 - Dependency stack: `openai`, `networkx`, `python-dotenv`, `numpy`, `fastapi`, `uvicorn`, `pyvis`
-- No vector database, no infrastructure — runs from one terminal command
+- No vector database, no infrastructure — runs from one terminal command, or via Docker
 
 ---
 
@@ -101,21 +108,41 @@ python visualise.py
 
 Then open the printed `file://` path in your browser.
 
+### Run with Docker Compose
+
+```bash
+# create placeholder cache files if they don't exist
+touch graph.json graph.html
+
+# build and start the API container
+docker compose up --build
+```
+
+Then open `http://localhost:8000/docs` for the interactive Swagger UI.
+
+Stop the container:
+```bash
+docker compose down
+```
+
 ---
 
 ## Project Structure
 
 ```
 graphrag-simple/
-├── main.py           # Entry point — loads data, runs queries as a script
-├── api.py            # FastAPI app — exposes /health, /graph/stats, /query
-├── visualise.py      # Generates interactive graph.html via pyvis
-├── graph_builder.py  # Extracts triples, deduplicates, normalizes, persists graph
-├── retriever.py      # Semantic node matching and subgraph context collection
-├── llm.py            # OpenAI calls (extraction, answering, embeddings)
-├── data.py           # Sample text corpus
-├── graph.json        # Auto-generated graph cache (gitignored)
-├── graph.html        # Auto-generated visualisation output (gitignored)
+├── main.py             # Entry point — loads data, runs queries as a script
+├── api.py              # FastAPI app — exposes /health, /graph/stats, /query
+├── visualise.py        # Generates interactive graph.html via pyvis
+├── graph_builder.py    # Extracts triples, deduplicates, normalizes, persists graph
+├── retriever.py        # Semantic node matching and subgraph context collection
+├── llm.py              # OpenAI calls (extraction, answering, embeddings)
+├── data.py             # Sample text corpus
+├── graph.json          # Auto-generated graph cache (gitignored)
+├── graph.html          # Auto-generated visualisation output (gitignored)
+├── Dockerfile           # Container build definition for the FastAPI app
+├── docker-compose.yml   # One-command orchestration for running the API
+├── .dockerignore         # Excludes unnecessary files from the Docker image
 └── requirements.txt
 ```
 
@@ -203,6 +230,7 @@ Graph loaded from graph.json — skipping rebuild.
 | **Persistent storage** | ❌ | ✅ JSON cache, skips rebuild |
 | **API access** | ❌ | ✅ FastAPI REST endpoints |
 | **Graph visualisation** | ❌ | ✅ Interactive HTML via pyvis |
+| **Containerized deployment** | ❌ | ✅ Docker + docker-compose |
 | **Setup complexity** | Vector DB required | NetworkX + numpy only |
 
 ---
@@ -215,6 +243,7 @@ Graph loaded from graph.json — skipping rebuild.
 - [x] Persistent graph storage — save/load graph via JSON, skip rebuild on rerun
 - [x] REST API layer — FastAPI with /health, /graph/stats, /query endpoints
 - [x] Interactive graph visualisation — draggable, zoomable HTML export via pyvis
+- [x] Dockerized deployment — Dockerfile + docker-compose for one-command API startup
 - [ ] Community detection for cluster-level summarisation before answering
 - [ ] Support ingesting PDFs and URLs as document sources
 
@@ -224,3 +253,4 @@ Graph loaded from graph.json — skipping rebuild.
 
 - Python 3.10+
 - OpenAI API key (`gpt-4o-mini` and `text-embedding-3-small` used by default)
+- Docker + Docker Compose (optional, for containerized deployment)
