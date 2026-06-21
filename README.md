@@ -54,7 +54,7 @@ A lightweight GraphRAG implementation that extracts a knowledge graph from raw t
 - `POST /query` — accepts a question, returns matched nodes, context, and answer
 - `GET /graph/stats` — returns node count, edge count, and full node list
 - `GET /health` — lightweight health check endpoint
-- Interactive Swagger UI available at `http://localhost:8000/docs`
+- Interactive Swagger UI available at `http://localhost/docs`
 
 ### 🎨 Interactive Graph Visualisation
 - Generates a standalone `graph.html` from the NetworkX graph using `pyvis`
@@ -66,14 +66,22 @@ A lightweight GraphRAG implementation that extracts a knowledge graph from raw t
 
 ### 🐳 Dockerized Deployment
 - `Dockerfile` builds a lean `python:3.11-slim` image running the FastAPI app via `uvicorn`
-- `docker-compose.yml` runs the API on port `8000` with one command
+- `docker-compose.yml` runs the full stack with one command
 - `graph.json` and `graph.html` are mounted as volumes — graph cache persists across container rebuilds
 - `.env` is passed via `env_file`, keeping API keys out of the image
 - `.dockerignore` keeps the image lean by excluding venvs, caches, and git files
 
+### 🌐 Nginx Reverse Proxy
+- `nginx.conf` routes incoming traffic to the FastAPI service via an upstream block
+- Nginx is the sole public entry point, exposed on port `80`
+- FastAPI container is only reachable inside the Docker network (`expose`, not `ports`)
+- Gzip compression enabled for JSON responses
+- Forwarded headers (`Host`, `X-Real-IP`, `X-Forwarded-For`, `X-Forwarded-Proto`) set for correct proxying
+- Health check passthrough available at `/health`
+
 ### ⚡ Minimal Setup
 - Dependency stack: `openai`, `networkx`, `python-dotenv`, `numpy`, `fastapi`, `uvicorn`, `pyvis`
-- No vector database, no infrastructure — runs from one terminal command, or via Docker
+- No vector database, no infrastructure — runs from one terminal command, or via Docker + Nginx
 
 ---
 
@@ -92,7 +100,7 @@ echo "OPENAI_API_KEY=sk-..." > .env
 python main.py
 ```
 
-### Run as an API
+### Run as an API directly
 
 ```bash
 uvicorn api:app --reload
@@ -108,19 +116,23 @@ python visualise.py
 
 Then open the printed `file://` path in your browser.
 
-### Run with Docker Compose
+### Run with Docker Compose + Nginx
 
 ```bash
 # create placeholder cache files if they don't exist
 touch graph.json graph.html
 
-# build and start the API container
+# build and start the API + Nginx containers
 docker compose up --build
 ```
 
-Then open `http://localhost:8000/docs` for the interactive Swagger UI.
+Access everything via Nginx on port `80`:
+```
+http://localhost/docs
+http://localhost/health
+```
 
-Stop the container:
+Stop the containers:
 ```bash
 docker compose down
 ```
@@ -140,9 +152,10 @@ graphrag-simple/
 ├── data.py             # Sample text corpus
 ├── graph.json          # Auto-generated graph cache (gitignored)
 ├── graph.html          # Auto-generated visualisation output (gitignored)
-├── Dockerfile           # Container build definition for the FastAPI app
-├── docker-compose.yml   # One-command orchestration for running the API
-├── .dockerignore         # Excludes unnecessary files from the Docker image
+├── Dockerfile          # Container build definition for the FastAPI app
+├── docker-compose.yml  # Orchestrates the API and Nginx containers
+├── nginx.conf           # Reverse proxy configuration routing to the API
+├── .dockerignore        # Excludes unnecessary files from the Docker image
 └── requirements.txt
 ```
 
@@ -231,6 +244,7 @@ Graph loaded from graph.json — skipping rebuild.
 | **API access** | ❌ | ✅ FastAPI REST endpoints |
 | **Graph visualisation** | ❌ | ✅ Interactive HTML via pyvis |
 | **Containerized deployment** | ❌ | ✅ Docker + docker-compose |
+| **Reverse proxy** | ❌ | ✅ Nginx in front of API |
 | **Setup complexity** | Vector DB required | NetworkX + numpy only |
 
 ---
@@ -244,6 +258,7 @@ Graph loaded from graph.json — skipping rebuild.
 - [x] REST API layer — FastAPI with /health, /graph/stats, /query endpoints
 - [x] Interactive graph visualisation — draggable, zoomable HTML export via pyvis
 - [x] Dockerized deployment — Dockerfile + docker-compose for one-command API startup
+- [x] Nginx reverse proxy — single public entry point on port 80
 - [ ] Community detection for cluster-level summarisation before answering
 - [ ] Support ingesting PDFs and URLs as document sources
 
