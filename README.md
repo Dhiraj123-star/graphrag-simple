@@ -79,6 +79,14 @@ A lightweight GraphRAG implementation that extracts a knowledge graph from raw t
 - Forwarded headers (`Host`, `X-Real-IP`, `X-Forwarded-For`, `X-Forwarded-Proto`) set for correct proxying
 - Health check passthrough available at `/health`
 
+### ⚙️ CI/CD Pipeline (GitHub Actions)
+- Workflow triggers automatically on every push to `main`
+- Builds the Docker image from the existing `Dockerfile` using `docker/build-push-action`
+- Pushes to Docker Hub at `dhiraj918106/graphrag-simple` with two tags: `latest` and the commit SHA
+- GitHub Actions cache enabled for faster subsequent builds
+- Docker Hub credentials stored as repository secrets — never baked into the image or codebase
+- Pull the latest image anytime: `docker pull dhiraj918106/graphrag-simple:latest`
+
 ### ⚡ Minimal Setup
 - Dependency stack: `openai`, `networkx`, `python-dotenv`, `numpy`, `fastapi`, `uvicorn`, `pyvis`
 - No vector database, no infrastructure — runs from one terminal command, or via Docker + Nginx
@@ -137,27 +145,61 @@ Stop the containers:
 docker compose down
 ```
 
+### Pull from Docker Hub
+
+```bash
+docker pull dhiraj918106/graphrag-simple:latest
+```
+
 ---
 
 ## Project Structure
 
 ```
 graphrag-simple/
-├── main.py             # Entry point — loads data, runs queries as a script
-├── api.py              # FastAPI app — exposes /health, /graph/stats, /query
-├── visualise.py        # Generates interactive graph.html via pyvis
-├── graph_builder.py    # Extracts triples, deduplicates, normalizes, persists graph
-├── retriever.py        # Semantic node matching and subgraph context collection
-├── llm.py              # OpenAI calls (extraction, answering, embeddings)
-├── data.py             # Sample text corpus
-├── graph.json          # Auto-generated graph cache (gitignored)
-├── graph.html          # Auto-generated visualisation output (gitignored)
-├── Dockerfile          # Container build definition for the FastAPI app
-├── docker-compose.yml  # Orchestrates the API and Nginx containers
-├── nginx.conf           # Reverse proxy configuration routing to the API
-├── .dockerignore        # Excludes unnecessary files from the Docker image
+├── .github/
+│   └── workflows/
+│       └── docker-publish.yml  # CI/CD — build and push to Docker Hub on push to main
+├── main.py                     # Entry point — loads data, runs queries as a script
+├── api.py                      # FastAPI app — exposes /health, /graph/stats, /query
+├── visualise.py                # Generates interactive graph.html via pyvis
+├── graph_builder.py            # Extracts triples, deduplicates, normalizes, persists graph
+├── retriever.py                # Semantic node matching and subgraph context collection
+├── llm.py                      # OpenAI calls (extraction, answering, embeddings)
+├── data.py                     # Sample text corpus
+├── graph.json                  # Auto-generated graph cache (gitignored)
+├── graph.html                  # Auto-generated visualisation output (gitignored)
+├── Dockerfile                  # Container build definition for the FastAPI app
+├── docker-compose.yml          # Orchestrates the API and Nginx containers
+├── nginx.conf                  # Reverse proxy configuration routing to the API
+├── .dockerignore               # Excludes unnecessary files from the Docker image
 └── requirements.txt
 ```
+
+---
+
+## CI/CD — GitHub Actions
+
+The workflow at `.github/workflows/docker-publish.yml` runs on every push to `main`:
+
+```
+push to main
+    → checkout code
+    → set up Docker Buildx
+    → log in to Docker Hub
+    → build image from Dockerfile
+    → push dhiraj918106/graphrag-simple:latest
+    → push dhiraj918106/graphrag-simple:<commit-sha>
+```
+
+### Required GitHub Secrets
+
+Go to **Settings → Secrets and variables → Actions** and add:
+
+| Secret | Value |
+|---|---|
+| `DOCKERHUB_USERNAME` | `dhiraj918106` |
+| `DOCKERHUB_TOKEN` | Your Docker Hub access token |
 
 ---
 
@@ -245,6 +287,7 @@ Graph loaded from graph.json — skipping rebuild.
 | **Graph visualisation** | ❌ | ✅ Interactive HTML via pyvis |
 | **Containerized deployment** | ❌ | ✅ Docker + docker-compose |
 | **Reverse proxy** | ❌ | ✅ Nginx in front of API |
+| **CI/CD pipeline** | ❌ | ✅ GitHub Actions → Docker Hub |
 | **Setup complexity** | Vector DB required | NetworkX + numpy only |
 
 ---
@@ -259,6 +302,7 @@ Graph loaded from graph.json — skipping rebuild.
 - [x] Interactive graph visualisation — draggable, zoomable HTML export via pyvis
 - [x] Dockerized deployment — Dockerfile + docker-compose for one-command API startup
 - [x] Nginx reverse proxy — single public entry point on port 80
+- [x] CI/CD pipeline — GitHub Actions builds and pushes image to Docker Hub on merge to main
 - [ ] Community detection for cluster-level summarisation before answering
 - [ ] Support ingesting PDFs and URLs as document sources
 
